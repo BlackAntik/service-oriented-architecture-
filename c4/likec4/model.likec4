@@ -1,0 +1,112 @@
+model {
+  // Actors
+  buyer = actor 'Buyer' {
+    description 'Пользователь, просматривающий и заказывающий товары'
+  }
+
+  seller = actor 'Seller' {
+    description 'Продавец, управляющий каталогом товаров'
+  }
+
+  moderator = actor 'Moderator' {
+    description 'Модератор, блокирующий недобросовестных пользователей и удаляющий запрещённые товары'
+  }
+
+  marketplace = system 'Marketplace' {
+    summary 'Цифровая платформа для размещения товаров и обработки заказов'
+
+    frontend = container 'Frontend App' {
+      technology 'React'
+      description 'Пользовательский интерфейс'
+    }
+
+    api_gateway = container 'API Gateway' {
+      technology 'Nginx'
+      description 'Точка входа и маршрутизатор запросов'
+    }
+
+    auth_container = container 'Auth' {
+      auth_service          = component 'Authentication Service'          { description 'Аутентификация, хэши паролей, токены' }
+      auth_db      = database 'Auth DB'            { technology 'Postgres'; description 'Данные аутентификации' }
+      auth_service          -> auth_db      'Чтение / запись'
+    }
+
+    personal_info_container = container 'Personal Info' {
+      personal_info_service = component'Personal Info Service'           { description 'Личные данные пользователей' }
+      personal_db  = database 'Personal DB'        { technology 'Postgres'; description 'Личные данные' }
+      personal_info_service -> personal_db  'Чтение / запись'
+    }
+
+    order_history_container = container 'Personal Info' {
+      order_history_queue    = queue 'History Queue'    { description 'Очередь для Order History' }
+      order_history_service = component 'Order History Service'           { description 'История заказов пользователей' }
+      order_history_db   = database 'Order History DB'   { technology 'Postgres'; description 'История заказов' }
+
+      order_history_queue -[async]-> order_history_service 'Обработка событий'
+      order_history_service -> order_history_db   'Чтение / запись'
+    }
+
+    ads_container = container 'Advertisement' {
+      ads_service           = component 'Advertisement Service'           { description 'Объявления и контакты продавцов' }
+      ads_db       = database 'Ads DB'             { technology 'Postgres'; description 'Объявления' }
+      ads_service           -> ads_db       'Чтение / запись'
+    }
+
+    reactions_container = container 'Reactions' {
+       reactions_service     = component 'Reactions Service'               { description 'Счётчики просмотров и лайков' }
+       reactions_db = database 'Reactions DB'       { technology 'Redis';   description 'Счётчики реакций' }
+       reactions_service     -> reactions_db 'Чтение / запись'
+    }
+
+    recommendations_container = container 'Recommendations' {
+      recommendations_events_queue = queue 'recommendations Events Queue'       { description 'Очередь для добавления евентов в Recommendations' }
+      recommendations_service          = component 'Recommendations Service'         { technology 'Python'; description 'Персональные рекомендации' }
+      recommendations_db      = database 'Recommendations DB' { technology 'MongoDB'; description 'Данные рекомендаций' }
+
+      recommendations_events_queue -[async]-> recommendations_service 'Обработка событий'
+      recommendations_service          -> recommendations_db      'Чтение / запись'
+    }
+
+    orders_container = container 'Orders' {
+      orders_service        = component 'Orders Service'                  { description 'Управление активными заказами' }
+      orders_db    = database 'Orders DB'          { technology 'Redis'; description 'Активные заказы' }
+      orders_service        -> orders_db    'Чтение / запись'
+    }
+    
+    payments_container = container 'Payments' {
+      payments_service      = component 'Payments Service'                { technology 'Node.js'; description 'Обработка платежей' }
+      payments_db  = database 'Payments DB'        { technology 'Postgres'; description 'Транзакции' }
+
+      payments_service      -> payments_db  'Чтение / запись'
+    }
+
+    notifs_container = container 'Notifications' {
+      notifs_queue     = queue 'Notifications Queue'   { description 'Очередь для Notifications' }
+      notifs_service        = component 'Notifications Service'           { technology 'Node.js'; description 'Отправка уведомлений' }
+      notifs_queue -[async]->notifs_service 'Обработка событий'
+    }    
+
+    buyer      -> frontend 'Открывает в браузере / приложении'
+    seller     -> frontend 'Открывает в браузере / приложении'
+    moderator  -> frontend 'Управление через браузер / приложение'
+
+    frontend   -> api_gateway 'REST запросы'
+
+    api_gateway -> auth_service          'Аутентификация'
+    api_gateway -> personal_info_service 'Личные данные'
+    api_gateway -> order_history_service 'История заказов'
+    api_gateway -> ads_service           'Работа с объявлениями'
+    api_gateway -> reactions_service     'Реакции (просмотры, лайки)'
+    api_gateway -> recommendations_service          'Рекомендации'
+    api_gateway -> orders_service        'Создание / управление заказами'
+
+    recommendations_service -> order_history_service 'Предпочтения пользователя'
+    recommendations_service -> personal_info_service 'Личная информация о пользователе'
+
+    ads_service -[async]-> recommendations_events_queue 'Обновления состояний объявлений'
+    ads_service -[async]-> order_history_queue 'Обновление истории заказов'
+
+    orders_service -> payments_service 'Произведение оплаты'
+    orders_service -[async]-> notifs_queue 'Уведомление об оплате'
+  }
+}

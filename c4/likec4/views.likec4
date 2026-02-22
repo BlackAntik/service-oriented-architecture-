@@ -1,0 +1,6 @@
+views {
+  view landscape {
+    title 'System landscape'
+    include *
+  }
+}
