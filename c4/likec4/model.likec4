@@ -37,7 +37,7 @@ model {
       personal_info_service -> personal_db  'Чтение / запись'
     }
 
-    order_history_container = container 'Personal Info' {
+    order_history_container = container 'Order History' {
       order_history_queue    = queue 'History Queue'    { description 'Очередь для Order History' }
       order_history_service = component 'Order History Service'           { description 'История заказов пользователей' }
       order_history_db   = database 'Order History DB'   { technology 'Postgres'; description 'История заказов' }
