@@ -1,0 +1,7 @@
+{
+  "user_id": "user_auth",
+  "flight_id": "10000000-0000-0000-0000-000000000001",
+  "passenger_name": "Auth User",
+  "passenger_email": "auth@example.com",
+  "seat_count": 1
+}

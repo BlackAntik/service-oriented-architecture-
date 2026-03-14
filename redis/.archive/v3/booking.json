@@ -1,0 +1,7 @@
+{
+  "user_id": "user1",
+  "flight_id": "10000000-0000-0000-0000-000000000001",
+  "passenger_name": "Ivan Ivanov",
+  "passenger_email": "ivan@example.com",
+  "seat_count": 2
+}

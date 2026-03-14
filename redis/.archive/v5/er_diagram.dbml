@@ -1,0 +1,110 @@
+Enum flight_status {
+  SCHEDULED
+  DEPARTED
+  CANCELLED
+  COMPLETED
+}
+
+Enum seat_reservation_status {
+  ACTIVE
+  RELEASED
+  EXPIRED
+}
+
+Enum booking_status {
+  CONFIRMED
+  CANCELLED
+}
+
+Table flight_airlines {
+  id uuid [pk]
+  iata_code char(2) [not null, unique]
+  name varchar(200) [not null]
+}
+
+Table flight_airports {
+  iata_code char(3) [pk]
+  name varchar(200)
+  city varchar(120)
+  country varchar(120)
+}
+
+Table flight_flights {
+  id uuid [pk]
+
+  airline_id uuid [not null]
+  flight_number varchar(16) [not null]
+
+  origin_iata char(3) [not null]
+  destination_iata char(3) [not null]
+
+  departure_time timestamptz [not null]
+  arrival_time timestamptz [not null]
+  departure_date date [not null]
+
+  total_seats int [not null]
+  available_seats int [not null]
+
+  price_amount numeric(12,2) [not null]
+  currency char(3) [not null]
+
+  status flight_status [not null]
+
+  Indexes {
+    (flight_number, departure_date) [unique]
+  }
+
+  Note: 'Checks: total_seats > 0; available_seats BETWEEN 0 AND total_seats; price_amount > 0; origin_iata <> destination_iata; arrival_time > departure_time'
+}
+
+Table flight_seat_reservations {
+  id uuid [pk]
+
+  flight_id uuid [not null]
+  booking_id uuid [not null, unique]
+
+  seats int [not null]
+  status seat_reservation_status [not null]
+
+  reserved_at timestamptz [not null]
+  expires_at timestamptz [not null]
+
+  Note: 'Checks: seats > 0; expires_at > reserved_at'
+}
+
+Ref: flight_flights.airline_id > flight_airlines.id
+Ref: flight_flights.origin_iata > flight_airports.iata_code
+Ref: flight_flights.destination_iata > flight_airports.iata_code
+Ref: flight_seat_reservations.flight_id > flight_flights.id
+
+Table booking_passengers {
+  id uuid [pk]
+
+  first_name varchar(120) [not null]
+  last_name varchar(120) [not null]
+  birth_date date
+  document_number varchar(64) [not null, unique]
+  email varchar(254)
+  phone varchar(32)
+}
+
+Table booking_bookings {
+  id uuid [pk]
+
+  passenger_id uuid [not null]
+
+  flight_id uuid [not null]
+
+  seats int [not null]
+
+  total_price_amount numeric(12,2) [not null]
+  currency char(3) [not null]
+
+  status booking_status [not null]
+
+  created_at timestamptz [not null]
+
+  Note: 'Checks: seats > 0; total_price_amount > 0'
+}
+
+Ref: booking_bookings.passenger_id > booking_passengers.id
