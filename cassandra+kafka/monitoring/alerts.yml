@@ -1,0 +1,29 @@
+groups:
+  - name: warehouse-consumer
+    rules:
+      - alert: ConsumerLagHigh
+        expr: sum(consumer_lag) > 50
+        for: 1m
+        labels:
+          severity: warning
+        annotations:
+          summary: "Consumer lag is high"
+          description: "Total consumer lag is {{ $value }} messages"
+
+      - alert: ConsumerLagCritical
+        expr: sum(consumer_lag) > 200
+        for: 2m
+        labels:
+          severity: critical
+        annotations:
+          summary: "Consumer lag is critical"
+          description: "Total consumer lag is {{ $value }} messages, consumer may be down"
+
+      - alert: CassandraWriteErrors
+        expr: rate(cassandra_write_errors_total[5m]) > 0
+        for: 1m
+        labels:
+          severity: warning
+        annotations:
+          summary: "Cassandra write errors detected"
+          description: "Write error rate is {{ $value }} errors/s"
