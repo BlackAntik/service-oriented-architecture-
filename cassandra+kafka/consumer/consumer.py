@@ -108,11 +108,34 @@ def get_inventory(session, sku, zone_id):
     return 0, 0, 0
 
 
+def _compute_totals(session, sku, zone_id, new_available, new_reserved):
+    rows = session.execute(
+        'SELECT zone_id, available, reserved FROM inventory_by_product_zone WHERE sku=%s',
+        (sku,),
+    )
+    total_avail = 0
+    total_res = 0
+    seen_current = False
+    for row in rows:
+        if row.zone_id == zone_id:
+            seen_current = True
+            total_avail += new_available or 0
+            total_res += new_reserved or 0
+        else:
+            total_avail += row.available or 0
+            total_res += row.reserved or 0
+    if not seen_current:
+        total_avail += new_available or 0
+        total_res += new_reserved or 0
+    return total_avail, total_res
+
+
 def write_inventory(session, sku, zone_id, available, reserved, now, event_ts, supplier_id=None):
+    total_available, total_reserved = _compute_totals(session, sku, zone_id, available, reserved)
+
     batch = BatchStatement(batch_type=BatchType.LOGGED)
     for table, col1, col2, v1, v2 in [
         ('inventory_by_product_zone', 'sku',     'zone_id', sku,     zone_id),
-        ('inventory_by_product',      'sku',     'zone_id', sku,     zone_id),
         ('inventory_by_zone',         'zone_id', 'sku',     zone_id, sku),
     ]:
         batch.add(
@@ -122,6 +145,13 @@ def write_inventory(session, sku, zone_id, available, reserved, now, event_ts, s
             ),
             (v1, v2, available, reserved, now, event_ts, supplier_id),
         )
+    batch.add(
+        SimpleStatement(
+            'INSERT INTO inventory_by_product (sku, total_available, total_reserved, updated_at, supplier_id) '
+            'VALUES (%s, %s, %s, %s, %s)'
+        ),
+        (sku, total_available, total_reserved, now, supplier_id),
+    )
     session.execute(batch)
 
 

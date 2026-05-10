@@ -18,14 +18,11 @@ CREATE TABLE IF NOT EXISTS inventory_by_product_zone (
 );
 
 CREATE TABLE IF NOT EXISTS inventory_by_product (
-    sku                  TEXT,
-    zone_id              TEXT,
-    available            INT,
-    reserved             INT,
-    updated_at           TIMESTAMP,
-    last_event_timestamp BIGINT,
-    supplier_id          TEXT,
-    PRIMARY KEY (sku, zone_id)
+    sku             TEXT PRIMARY KEY,
+    total_available INT,
+    total_reserved  INT,
+    updated_at      TIMESTAMP,
+    supplier_id     TEXT
 );
 
 CREATE TABLE IF NOT EXISTS inventory_by_zone (

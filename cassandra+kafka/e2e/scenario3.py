@@ -92,15 +92,14 @@ def main():
     check('inventory_by_product_zone reserved', res_pz, 0)
 
     print('\n=== Step 2b: inventory_by_product ===')
-    rows = list(session.execute(
-        'SELECT zone_id, available, reserved FROM inventory_by_product WHERE sku=%s',
+    row = session.execute(
+        'SELECT total_available, total_reserved FROM inventory_by_product WHERE sku=%s',
         (sku,),
-    ))
-    total_avail = sum(r.available or 0 for r in rows)
-    zone_row = next((r for r in rows if r.zone_id == zone), None)
-    avail_p = zone_row.available if zone_row else 0
-    check('inventory_by_product total available', total_avail, 100)
-    check('inventory_by_product zone available', avail_p, 100)
+    ).one()
+    total_avail = row.total_available if row else 0
+    total_res = row.total_reserved if row else 0
+    check('inventory_by_product total_available', total_avail, 100)
+    check('inventory_by_product total_reserved', total_res, 0)
 
     print('\n=== Step 2c: inventory_by_zone ===')
     rows_z = list(session.execute(

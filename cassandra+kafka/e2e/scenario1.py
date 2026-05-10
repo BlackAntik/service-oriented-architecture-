@@ -99,8 +99,10 @@ def main():
     check('ZONE-A reserved', res, 0)
 
     print('\n=== Step 4: inventory_by_product total ===')
-    rows = list(session.execute('SELECT available FROM inventory_by_product WHERE sku=%s', (sku,)))
-    total = sum(r.available or 0 for r in rows)
+    row = session.execute(
+        'SELECT total_available FROM inventory_by_product WHERE sku=%s', (sku,)
+    ).one()
+    total = row.total_available if row else 0
     check('total available', total, 100)
 
     print('\n=== Step 5: PRODUCT_RESERVED SKU-001 ZONE-A qty=30 ===')

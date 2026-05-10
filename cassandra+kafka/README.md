@@ -34,14 +34,21 @@ SELECT * FROM inventory_by_product_zone WHERE sku = ? AND zone_id = ?;
 ### Таблица `inventory_by_product`
 
 ```cql
-PRIMARY KEY (sku, zone_id)
+PRIMARY KEY (sku)
 ```
 
-Структурно идентична `inventory_by_product_zone`. Выделена как отдельная таблица для семантической ясности: агрегированный взгляд на остатки товара по всем зонам. В будущем может быть расширена дополнительными полями (например, `product_name`, `category`) без влияния на `inventory_by_product_zone`.
+**Агрегированный взгляд** на остатки товара по всем зонам: одна строка на `sku` с полями `total_available` и `total_reserved` — суммой по всем зонам.
+
+**Partition key:** `sku` — для запроса по конкретному товару нужен ровно один lookup на одну партицию, без вычитываний нескольких строк.
+
+При обработке события consumer:
+1. Читает все строки `inventory_by_product_zone WHERE sku=?` (партиция небольшая — товар хранится в ограниченном числе зон).
+2. Вычисляет суммы с учётом нового значения для текущей зоны.
+3. Атомарно (LOGGED BATCH) обновляет `inventory_by_product_zone`, `inventory_by_zone` и `inventory_by_product` — ни одна из таблиц не остаётся в рассинхроне.
 
 **Поддерживаемый запрос:**
 ```cql
-SELECT * FROM inventory_by_product WHERE sku = ?;
+SELECT total_available, total_reserved FROM inventory_by_product WHERE sku = ?;
 ```
 
 ---
